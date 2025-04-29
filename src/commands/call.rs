@@ -14,42 +14,15 @@ pub async fn ring(ctx: Context<'_>) -> Result<(), Error> {
     let guild_id = ctx.guild_id().ok_or("Could not get guild")?;
     let initial = ctx.say("Please wait until another party has answered the call...").await?;
 
-    let userphone = &ctx.data();
+    let userphone = ctx.data();
     let channel_id = ctx.channel_id();
-
-    let webhook = get_webhook(ctx.http(), userphone, channel_id).await?;
 
     if userphone.current_calls.contains_key(&channel_id) {
         initial.edit(ctx, poise::CreateReply::default().content("You're already in a call!")).await?;
         return Ok(());
     }
 
-    let initial_message = initial.message().await?.into_owned();
-    let content = initial_message.content.clone();
-    
-    let mut message = match queue_handling(userphone, guild_id,  webhook, channel_id, initial_message).await {
-        Ok(v) => v,
-        Err(e) => {
-            if format!("{}", e) == content {
-                return Ok(())
-            } else {
-                return Err(e)
-            }
-        }
-    };
-  
-    message.edit(
-        ctx, 
-        serenity::EditMessage::default()
-            .content("A party has picked up the call.. Please be nice and respectful!")
-    ).await?;
-
-    initial.edit(
-        ctx, 
-        poise::CreateReply::default()
-            .content("A party has picked up the call.. Please be nice and respectful!")
-    ).await?;
-    
+    handle_main(ctx, userphone, guild_id, channel_id, initial).await?;
 
     Ok(())
 }
@@ -67,13 +40,13 @@ pub async fn skip(ctx: Context<'_>) -> Result<(), Error> {
     let guild_id = ctx.guild_id().ok_or("Could not get guild")?;
     let channel_id = ctx.channel_id();
 
-    let userphone = &ctx.data();
+    let userphone = ctx.data();
 
     let http = ctx.http();
 
     let linked_channel = userphone.current_calls.get(&channel_id)
         .map(|v| v.linked_channel)
-        .ok_or("You are not currently inside a call..")?;
+        .ok_or("You are not currently inside a **call**..")?;
     
     userphone.current_calls.remove(&linked_channel);
     userphone.current_calls.remove(&channel_id);
@@ -86,32 +59,42 @@ pub async fn skip(ctx: Context<'_>) -> Result<(), Error> {
 
     let reply = ctx.say("Skipping the call..").await?;
 
-    let initial_message = reply.message().await?.into_owned();
-    let content = initial_message.content.clone();
+    handle_main(ctx, userphone, guild_id, channel_id, reply).await?;
 
-    let webhook = get_webhook(http, userphone, channel_id).await?;
-    
-    let mut message = match queue_handling(userphone, guild_id,  webhook, channel_id, initial_message).await {
+    Ok(())
+}
+
+pub async fn handle_main(
+    ctx: Context<'_>,
+    userphone: &Data,
+    guild_id: serenity::GuildId,
+    channel_id: serenity::ChannelId,
+    initial_message: poise::ReplyHandle<'_>,
+) -> Result<(), Error> {
+    let webhook = get_webhook(ctx.http(), userphone, channel_id).await?;
+
+    let reply_message = initial_message.message().await?.into_owned();
+
+    let mut message = match queue_handling(userphone, guild_id, webhook, channel_id, reply_message).await {
         Ok(v) => v,
         Err(e) => {
-            if format!("{}", e) == content {
-                return Ok(())
-            } else {
-                return Err(e)
+            if format!("{}", e) == "Nothing".to_owned() {
+                return Ok(());
             }
+            return Err(e);
         }
     };
 
     message.edit(
-        http, 
+        ctx, 
         serenity::EditMessage::default()
             .content("A party has picked up the call.. Please be nice and respectful!")
     ).await?;
 
-    reply.edit(
+    initial_message.edit(
         ctx, 
         poise::CreateReply::default()
-            .content("A party has picked up the call.. Please be nice and respectful!")
+        .content("A party has picked up the call.. Please be nice and respectful!")
     ).await?;
 
     Ok(())
@@ -134,8 +117,7 @@ pub async fn queue_handling(
         Some(v) => v.0,
         None => {
 
-            let content = original_message.content.clone();
-
+    
             queue.push(WaitLine {
                 guild_id,
                 current_channel,
@@ -143,7 +125,7 @@ pub async fn queue_handling(
                 original_message,
             });
 
-            return Err(content.into())
+            return Err("Nothing".into())
         }
     };
 
