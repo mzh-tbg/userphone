@@ -25,10 +25,12 @@ pub async fn event_handler(
     );
     let http = ctx.http();
 
-
     match event {
         serenity::FullEvent::Message { new_message } => {
             events::message::message(http, new_message, data).await?;
+        } 
+        serenity::FullEvent::GuildDelete { incomplete, full } => {
+            events::guild_remove::guild_removal(http, incomplete, full, data).await?;
         }
         _ => ()
     }
