@@ -1,5 +1,5 @@
 use crate::{commands::get_webhook, data::{Context, Data, Error, UserphoneLink, WaitLine}};
-use poise::serenity_prelude as serenity;
+use poise::serenity_prelude::{self as serenity, model::user};
 
 
 #[poise::command(
@@ -12,13 +12,15 @@ use poise::serenity_prelude as serenity;
 )]
 pub async fn ring(ctx: Context<'_>) -> Result<(), Error> {
     let guild_id = ctx.guild_id().ok_or("Could not get guild")?;
-    let initial = ctx.say("Please wait until another party has answered the call...").await?;
+    let initial = ctx.say("Please wait until another party has answered the call... 📲").await?;
 
     let userphone = ctx.data();
     let channel_id = ctx.channel_id();
 
-    if userphone.current_calls.contains_key(&channel_id) {
-        initial.edit(ctx, poise::CreateReply::default().content("You're already in a call!")).await?;
+    if userphone.current_calls.contains_key(&channel_id)
+    || userphone.wait_line.lock().iter().find(|v| v.current_channel == channel_id).is_some()
+     {
+        initial.edit(ctx, poise::CreateReply::default().content("You can't use this command yet!!!!!! [hangup to use]")).await?;
         return Ok(());
     }
 
@@ -85,16 +87,18 @@ pub async fn handle_main(
         }
     };
 
+    let content = "🤙 A party has picked up the call.. Please be nice and respectful!";
+
     message.edit(
         ctx, 
         serenity::EditMessage::default()
-            .content("A party has picked up the call.. Please be nice and respectful!")
+            .content(content)
     ).await?;
 
     initial_message.edit(
         ctx, 
         poise::CreateReply::default()
-        .content("A party has picked up the call.. Please be nice and respectful!")
+        .content(content)
     ).await?;
 
     Ok(())

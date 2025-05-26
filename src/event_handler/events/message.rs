@@ -9,7 +9,7 @@ pub async fn message(
     data: &Data,
 ) -> Result<(), Error> {
 
-    let command_names = vec!["~ring", "~skip", "~call", "~c", "~phone", "~connect", "~s", "~nc", "~newcall"];
+    const COMMAND_NAMES: [&str; 9] = ["~ring", "~skip", "~call", "~c", "~phone", "~connect", "~s", "~nc", "~newcall"];
 
     let channel_id = &new_message.channel_id;
     let author = &new_message.author;
@@ -17,7 +17,7 @@ pub async fn message(
     let message_content = new_message.content.clone();
 
     if author.bot || message_content.is_empty()
-        || command_names.contains(&message_content.as_str()) {
+        || COMMAND_NAMES.contains(&message_content.as_str()) {
         return Ok(())
     }
     

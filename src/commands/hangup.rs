@@ -24,7 +24,7 @@ pub async fn hangup(ctx: Context<'_>) -> Result<(), Error> {
             linked_channel.send_message(
                 ctx.http(), 
                 serenity::CreateMessage::new()
-                    .content("The other party has ended the call :( ...")
+                    .content("☎️ The other party has ended the call ...")
             ).await?;
 
         },
@@ -44,7 +44,7 @@ pub async fn hangup(ctx: Context<'_>) -> Result<(), Error> {
 
     ctx.send(
         poise::CreateReply::default()
-            .content("You have ended the call")
+            .content("☎️ You have ended the call ...")
     ).await?;
 
     Ok(())

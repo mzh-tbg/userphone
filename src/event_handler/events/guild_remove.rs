@@ -12,7 +12,7 @@ pub async fn guild_removal(
     {
         let mut lock = data.wait_line.lock();
 
-        if let Some(pos) = data.wait_line.lock()
+        if let Some(pos) = lock
             .iter()
             .position(|v| v.guild_id == incomplete.id)
         {
