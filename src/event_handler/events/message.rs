@@ -1,4 +1,4 @@
-use poise::serenity_prelude as serenity;
+use poise::serenity_prelude::{self as serenity, Mentionable};
 use crate::data::{Data, Error};
 use std::time::{Duration, Instant};
 
@@ -28,14 +28,15 @@ pub async fn message(
 
     if let Some(v) = &new_message.referenced_message {
         if !v.content.is_empty() {  
-            builder = builder.embed(
-                serenity::CreateEmbed::new()
-                    .author(
-                        serenity::CreateEmbedAuthor::new(format!("- Replying to {}", &v.author.name))
-                            .icon_url(v.author.face())
-                    )
-                    .colour(serenity::Colour::BLURPLE)
-                    .field("", &v.content, false)
+            builder = builder.content(
+                format!("> -# Replied to {} [{}]
+                > {}
+{}",
+                    &v.author.mention(),
+                    &v.author.name,
+                    &v.content,
+                    &new_message.content
+                )
             )
         }
     }
@@ -75,3 +76,4 @@ pub async fn message(
 
     Ok(())
 }
+
